@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Topiqueiros</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #f5f5f5;
+    --surface: #ffffff;
+    --surface2: #fef3e8;
+    --border: #e8e0d8;
+    --accent: #e8610a;
+    --accent2: #ff8c3a;
+    --accent3: #ff6b1a;
+    --danger: #dc2626;
+    --text: #1a1208;
+    --text2: #6b5a4a;
+    --text3: #a0917f;
+    --green: #16a34a;
+    --radius: 10px;
+  }
+
+  /* ── TEMA ESCURO ── */
+  .dark {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222535;
+    --border: #2e3248;
+    --accent: #e8610a;
+    --accent2: #ff8c3a;
+    --accent3: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --green: #10b981;
+  }
+  .dark header {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .dark input, .dark select { background: #0f1117; }
+  .dark input[readonly] { background: #222535; }
+  .dark .filter-input { background: #0f1117; }
+  .dark tr:hover td { background: rgba(255,255,255,0.025); }
+  .dark .driver-card:hover { box-shadow: 0 2px 10px rgba(232,97,10,0.15); }
+  .dark #toast { background: #1a1d27; color: #e2e8f0; }
+  .dark ::-webkit-scrollbar-track { background: transparent; }
+  .dark ::-webkit-scrollbar-thumb { background: #2e3248; }
+
+  /* ── TOGGLE DE TEMA ── */
+  .theme-toggle {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,0.3); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--accent);
+    border-bottom: none;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(232,97,10,0.25);
+  }
+  .logo {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo span {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .month-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .month-label {
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    min-width: 160px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .btn-icon {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-icon:hover { background: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.5); }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 0 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .tab {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--accent); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* ── MAIN LAYOUT ── */
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── STAT CARDS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    border-top: 3px solid var(--accent);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  .stat-label { color: var(--text3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.blue { color: var(--accent); }
+  .stat-value.amber { color: #f97316; }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--surface2);
+  }
+  .panel-title { font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .badge { background: var(--accent); color: #fff; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+
+  /* ── FORM LANÇAMENTO ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 1fr auto;
+    gap: 10px;
+    padding: 16px 20px;
+    align-items: end;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select {
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,97,10,0.12); }
+  input::placeholder { color: var(--text3); }
+  input[readonly] { background: var(--surface2); color: var(--green); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  select option { background: #fff; color: var(--text); }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 2px 6px rgba(232,97,10,0.25);
+  }
+  .btn:hover { background: #c94e06; box-shadow: 0 3px 10px rgba(232,97,10,0.35); }
+  .btn:active { transform: scale(0.97); }
+  .btn.danger { background: var(--danger); box-shadow: 0 2px 6px rgba(220,38,38,0.2); }
+  .btn.danger:hover { background: #b91c1c; }
+  .btn.secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    box-shadow: none;
+  }
+  .btn.secondary:hover { background: var(--surface2); color: var(--accent); border-color: var(--accent); }
+  .btn.success { background: var(--green); box-shadow: 0 2px 6px rgba(22,163,74,0.2); }
+  .btn.success:hover { background: #15803d; }
+  .btn.amber-btn { background: #f97316; box-shadow: 0 2px 6px rgba(249,115,22,0.25); }
+  .btn.amber-btn:hover { background: #ea6b0a; }
+
+  /* ── TABELA ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--surface2);
+    color: var(--text3);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(232,97,10,0.04); }
+  .td-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .td-green { color: var(--green); font-weight: 600; }
+  .td-blue { color: var(--accent); font-weight: 600; }
+  .td-amber { color: #f97316; font-weight: 600; }
+  .td-red { color: var(--danger); }
+
+  .del-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text3);
+    border-radius: 5px;
+    width: 26px; height: 26px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .del-btn:hover { color: var(--danger); border-color: var(--danger); background: rgba(220,38,38,0.08); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+  }
+  .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── SEÇÃO MOTORISTAS ── */
+  .drivers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 16px 20px;
+  }
+  .driver-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .driver-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(232,97,10,0.1); }
+  .driver-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #ff8c3a);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(232,97,10,0.3);
+  }
+  .driver-info { flex: 1; min-width: 0; }
+  .driver-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  .driver-route { color: var(--text3); font-size: 11px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .driver-value { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .driver-pix { color: var(--text3); font-size: 11px; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+  .driver-pix .pix-key { color: var(--accent2); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .pix-copy-btn {
+    background: none; border: none; cursor: pointer; padding: 1px 4px;
+    color: var(--text3); font-size: 11px; border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .pix-copy-btn:hover { color: var(--accent); background: rgba(232,97,10,0.1); }
+  .driver-actions { display: flex; gap: 4px; }
+  .icon-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text3);
+    border-radius: 5px;
+    width: 26px; height: 26px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover.edit { color: var(--accent); border-color: var(--accent); background: rgba(232,97,10,0.08); }
+  .icon-btn:hover.del { color: var(--danger); border-color: var(--danger); background: rgba(220,38,38,0.08); }
+
+  /* ── MODAL ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  }
+  .modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+  .modal-grid { display: grid; gap: 14px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+  .hidden { display: none !important; }
+
+  /* ── RENOVAR MÊS ── */
+  .renew-box {
+    background: linear-gradient(135deg, rgba(232,97,10,0.07), rgba(255,140,58,0.05));
+    border: 1px solid rgba(232,97,10,0.25);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .renew-box .renew-text h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .renew-box .renew-text p { font-size: 12px; color: var(--text2); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+    max-width: 300px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.ok { border-left: 3px solid var(--green); }
+  #toast.err { border-left: 3px solid var(--danger); }
+  #toast.info { border-left: 3px solid var(--accent); }
+
+  /* ── MODAL EMAIL ── */
+  .email-modal { max-width: 520px; }
+  .email-chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .email-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px; font-size: 12px;
+    cursor: pointer; transition: all 0.15s; color: var(--text2);
+  }
+  .email-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .email-chip.selected { background: rgba(232,97,10,0.12); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .email-chip .chip-icon { font-size: 14px; }
+  .email-divider { display: flex; align-items: center; gap: 10px; color: var(--text3); font-size: 11px; margin: 12px 0; }
+  .email-divider::before, .email-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+  .email-preview {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; font-size: 12px; color: var(--text2); line-height: 1.7;
+    max-height: 200px; overflow-y: auto; white-space: pre-wrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .email-preview-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 14px; }
+  .finance-email-saved { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .finance-email-saved a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #d9c9b8; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* ── FILTROS ── */
+  .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .filter-input {
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    width: 180px;
+  }
+  .filter-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,97,10,0.12); }
+
+  /* ── TOTAIS POR MOTORISTA ── */
+  .driver-total-row { cursor: default; }
+  .driver-total-row td { font-weight: 500; }
+
+  /* ══ RELATÓRIO ══ */
+  .rel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
+  }
+  .rel-title { font-size: 20px; font-weight: 700; color: var(--text); }
+  .rel-sub { font-size: 13px; color: var(--text3); margin-top: 2px; }
+
+  .rel-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .rel-kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    border-top: 3px solid var(--accent);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  .rel-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 6px; }
+  .rel-kpi-value { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .rel-kpi-value.orange { color: var(--accent); }
+  .rel-kpi-value.green  { color: var(--green); }
+  .rel-kpi-value.blue   { color: #2563eb; }
+  .rel-kpi-value.purple { color: #7c3aed; }
+  .dark .rel-kpi-value.blue   { color: #60a5fa; }
+  .dark .rel-kpi-value.purple { color: #a78bfa; }
+  .rel-kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* card de motorista */
+  .mot-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .mot-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(232,97,10,0.1); }
+  .mot-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #ff8c3a);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; color: #fff;
+    box-shadow: 0 2px 6px rgba(232,97,10,0.3);
+    flex-shrink: 0;
+  }
+  .mot-info { min-width: 0; }
+  .mot-name { font-weight: 700; font-size: 14px; color: var(--text); }
+  .mot-rota { font-size: 11px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mot-bar-wrap { margin-top: 8px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .mot-bar { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #ff8c3a); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .mot-bar.green-bar { background: linear-gradient(90deg, var(--green), #4ade80); }
+  .mot-stats { text-align: right; flex-shrink: 0; }
+  .mot-valor { font-size: 18px; font-weight: 700; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+  .mot-volumes { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* calendário de dias */
+  .dia-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+  .dia-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .dia-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(232,97,10,0.1); }
+  .dia-card.dia-top { border-color: var(--accent); background: var(--surface2); }
+  .dia-date { font-size: 11px; font-weight: 600; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .dia-vol { font-size: 20px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+  .dia-vol-label { font-size: 10px; color: var(--text3); }
+  .dia-custo { font-size: 12px; font-weight: 600; color: var(--green); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .dia-bar { margin-top: 6px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .dia-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+
+  /* linha de rota */
+  .rota-row {
+    display: grid;
+    grid-template-columns: 1fr 100px 130px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rota-row:last-child { border-bottom: none; }
+  .rota-nome { font-weight: 600; font-size: 13px; color: var(--text); }
+  .rota-resp { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .rota-bar-wrap { position: relative; }
+  .rota-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .rota-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2563eb, #60a5fa); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .rota-vol { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .rota-val { font-size: 13px; font-weight: 700; color: var(--green); font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+  /* ordenação */
+  .rel-sort { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); flex-wrap: wrap; }
+  .sort-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sort-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* print */
+  @media print {
+    header, .tabs, .rel-header button, .rel-sort, .theme-toggle { display: none !important; }
+    body { background: #fff !important; color: #000 !important; }
+    .panel { box-shadow: none !important; border: 1px solid #ddd !important; }
+    #tab-lancamentos, #tab-motoristas { display: none !important; }
+    #tab-relatorio { display: block !important; }
+    main { padding: 0 !important; }
+    .mot-card, .dia-card, .rota-row { break-inside: avoid; }
+  }
+
+  @media (max-width: 768px) {
+    main { padding: 14px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid > *:last-child { grid-column: 1/-1; }
+    .rel-header { flex-direction: column; align-items: flex-start; }
+    .rota-row { grid-template-columns: 1fr 1fr; }
+    .rota-bar-wrap { display: none; }
+    .mot-card { grid-template-columns: 36px 1fr auto; gap: 10px; }
+    .dia-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    🚐 Controle de Topiqueiros <span>SISTEMA</span>
+  </div>
+  <div class="month-ctrl">
+    <button class="btn-icon" id="btnPrevMonth" title="Mês anterior">‹</button>
+    <div class="month-label" id="monthLabel">—</div>
+    <button class="btn-icon" id="btnNextMonth" title="Próximo mês">›</button>
+  </div>
+  <div class="header-actions">
+    <button class="theme-toggle" id="btnTheme" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+    <button class="btn secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
+    <button class="btn amber-btn" onclick="showRenewConfirm()">🔄 Renovar Mês</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" data-tab="lancamentos">📋 Lançamentos</div>
+  <div class="tab" data-tab="relatorio">📊 Relatório do Mês</div>
+  <div class="tab" data-tab="motoristas">👤 Motoristas & Rotas</div>
+</div>
+
+<main>
+
+  <!-- ══ TAB: LANÇAMENTOS ══ -->
+  <div id="tab-lancamentos">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Volumes</div>
+        <div class="stat-value blue" id="statVolumes">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Custo Total Mês</div>
+        <div class="stat-value green" id="statCusto">R$ 0,00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lançamentos</div>
+        <div class="stat-value" id="statEntradas">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Motoristas Ativos</div>
+        <div class="stat-value amber" id="statMotoristas">0</div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header">
+        <div class="panel-title">➕ Novo Lançamento</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Rota / Motorista</label>
+          <select id="fRota">
+            <option value="">Selecione a rota...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="fData">
+        </div>
+        <div class="form-group">
+          <label>Qtd de Volumes</label>
+          <input type="number" id="fQtd" min="1" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Total (R$)</label>
+          <input type="text" id="fTotal" readonly placeholder="Calculado auto.">
+        </div>
+        <button class="btn" onclick="addLancamento()">Adicionar</button>
+      </div>
+    </div>
+
+    <!-- Filtros + Tabela -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 Lançamentos do Mês <span class="badge" id="lancBadge">0</span></div>
+        <div class="filters">
+          <input class="filter-input" id="filterTexto" placeholder="Filtrar rota ou motorista..." oninput="renderLancamentos()">
+          <input class="filter-input" type="date" id="filterData" oninput="renderLancamentos()" style="width:160px">
+          <button class="btn secondary" style="padding:7px 12px;font-size:12px" onclick="clearFilters()">Limpar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Rota</th>
+              <th>Responsável</th>
+              <th>Volumes</th>
+              <th>R$/cx</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLanc"></tbody>
+        </table>
+        <div id="emptyLanc" class="empty-state hidden">
+          <div class="icon">📭</div>
+          <p>Nenhum lançamento neste mês.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: RELATÓRIO UNIFICADO ══ -->
+  <div id="tab-relatorio" class="hidden">
+
+    <!-- Cabeçalho do relatório -->
+    <div class="rel-header">
+      <div>
+        <div class="rel-title" id="relTitulo">Relatório — —</div>
+        <div class="rel-sub" id="relSub">Carregando...</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn secondary" onclick="abrirModalEmail()" style="gap:6px;display:flex;align-items:center">
+          ✉️ Enviar por E-mail
+        </button>
+        <button class="btn" onclick="imprimirRelatorio()" style="gap:6px;display:flex;align-items:center">
+          🖨️ Imprimir / PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIs do mês -->
+    <div class="rel-kpis" id="relKpis"></div>
+
+    <!-- SEÇÃO: Motoristas -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header">
+        <div class="panel-title">👤 Pagamento por Motorista</div>
+        <div class="rel-sort">
+          Ordenar:
+          <button class="sort-btn active" data-sort="valor" onclick="setSortMotorista('valor',this)">Maior valor</button>
+          <button class="sort-btn" data-sort="volumes" onclick="setSortMotorista('volumes',this)">Mais volumes</button>
+          <button class="sort-btn" data-sort="nome" onclick="setSortMotorista('nome',this)">Nome A–Z</button>
+        </div>
+      </div>
+      <div id="relMotoristas" style="padding:16px 20px;display:grid;gap:10px"></div>
+      <div id="emptyRelMotoristas" class="empty-state hidden"><div class="icon">👤</div><p>Sem dados neste mês.</p></div>
+    </div>
+
+    <!-- SEÇÃO: Calendário de volumes -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header">
+        <div class="panel-title">📅 Volumes por Dia</div>
+      </div>
+      <div id="relCalendario" style="padding:16px 20px"></div>
+      <div id="emptyRelDia" class="empty-state hidden"><div class="icon">📅</div><p>Sem dados neste mês.</p></div>
+    </div>
+
+    <!-- SEÇÃO: Rotas -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header">
+        <div class="panel-title">🗺 Volume por Rota</div>
+      </div>
+      <div id="relRotas" style="padding:16px 20px;display:grid;gap:8px"></div>
+      <div id="emptyRelRota" class="empty-state hidden"><div class="icon">🗺</div><p>Sem dados neste mês.</p></div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: MOTORISTAS ══ -->
+  <div id="tab-motoristas" class="hidden">
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-header">
+        <div class="panel-title">➕ Adicionar Rota / Motorista</div>
+      </div>
+      <div class="form-grid" style="grid-template-columns:2fr 2fr 1.5fr 1fr auto">
+        <div class="form-group">
+          <label>Nome da Rota / Cidade(s)</label>
+          <input type="text" id="novaRota" placeholder="Ex: SÃO MIGUEL">
+        </div>
+        <div class="form-group">
+          <label>Nome do Responsável</label>
+          <input type="text" id="novoResponsavel" placeholder="Ex: GUILHERME">
+        </div>
+        <div class="form-group">
+          <label>Chave Pix</label>
+          <input type="text" id="novoPixKey" placeholder="CPF, telefone, e-mail...">
+        </div>
+        <div class="form-group">
+          <label>R$ por Caixa</label>
+          <input type="number" id="novoValor" step="0.50" min="0" placeholder="9.50">
+        </div>
+        <button class="btn success" onclick="addDriver()">Adicionar</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">👤 Rotas Cadastradas <span class="badge" id="driverBadge">0</span></div>
+      </div>
+      <div class="drivers-grid" id="driversGrid"></div>
+      <div id="emptyDrivers" class="empty-state hidden">
+        <div class="icon">👤</div>
+        <p>Nenhum motorista cadastrado.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL EDITAR MOTORISTA -->
+<div class="overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <h2>✏️ Editar Rota / Motorista</h2>
+    <input type="hidden" id="editIdx">
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>Nome da Rota / Cidade(s)</label>
+        <input type="text" id="editRota">
+      </div>
+      <div class="form-group">
+        <label>Nome do Responsável</label>
+        <input type="text" id="editResponsavel">
+      </div>
+      <div class="form-group">
+        <label>Chave Pix</label>
+        <input type="text" id="editPixKey" placeholder="CPF, telefone, e-mail...">
+      </div>
+      <div class="form-group">
+        <label>R$ por Caixa</label>
+        <input type="number" id="editValor" step="0.50" min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="saveEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RENOVAR MÊS -->
+<div class="overlay hidden" id="renewOverlay">
+  <div class="modal">
+    <h2>🔄 Renovar / Avançar Mês</h2>
+    <p style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:20px">
+      Ao avançar o mês, <strong style="color:var(--text)">todos os lançamentos (volumes e valores)</strong> do mês atual serão arquivados e o novo mês começará zerado.<br><br>
+      Os motoristas, rotas e valores por caixa são <strong style="color:var(--green)">mantidos</strong>.
+    </p>
+    <div id="renewTarget" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:20px;font-size:13px;color:var(--text2)">
+      Avançar para: <strong style="color:var(--accent)" id="renewTargetLabel">—</strong>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="closeRenew()">Cancelar</button>
+      <button class="btn amber-btn" onclick="confirmRenew()">✅ Confirmar Renovação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR E-MAIL -->
+<div class="overlay hidden" id="emailOverlay">
+  <div class="modal email-modal">
+    <h2>📧 Enviar Relatório PDF pelo Gmail</h2>
+
+    <!-- Status Google Auth -->
+    <div id="googleAuthStatus" style="margin-bottom:16px">
+      <div id="authNotConnected" style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+        <span style="font-size:20px">🔐</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:var(--text)">Conectar conta Google</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Necessário para enviar pelo Gmail</div>
+        </div>
+        <button class="btn" onclick="autenticarGoogle()" style="padding:7px 14px;font-size:12px">Conectar</button>
+      </div>
+      <div id="authConnected" class="hidden" style="display:flex;align-items:center;gap:10px;background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.3);border-radius:8px;padding:12px 14px">
+        <span style="font-size:20px">✅</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:var(--green)">Google conectado</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px" id="googleUserEmail">—</div>
+        </div>
+        <button class="btn secondary" onclick="desconectarGoogle()" style="padding:6px 12px;font-size:11px">Sair</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:10px">
+      <label>Destinatários rápidos</label>
+      <div class="email-chip-group" id="emailChips"></div>
+    </div>
+
+    <div class="email-divider">ou digite um e-mail</div>
+
+    <div class="form-group">
+      <label>E-mail do destinatário</label>
+      <input type="email" id="emailDestInput" placeholder="exemplo@empresa.com">
+    </div>
+
+    <div class="form-group" style="margin-top:10px">
+      <label>E-mail de Finanças (salvo)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="email" id="emailFinancasInput" placeholder="financas@empresa.com" style="flex:1">
+        <button class="btn secondary" onclick="salvarEmailFinancas()" style="white-space:nowrap;padding:8px 14px">💾 Salvar</button>
+      </div>
+      <div class="finance-email-saved">Este e-mail fica salvo para uso futuro.</div>
+    </div>
+
+    <div class="email-preview-label">📋 Conteúdo do PDF</div>
+    <div class="email-preview" id="emailPreview">Carregando...</div>
+
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="fecharModalEmail()">Cancelar</button>
+      <button class="btn" onclick="enviarEmailGmail()" style="gap:6px;display:flex;align-items:center">
+        📧 Enviar PDF pelo Gmail
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════
+const STORE_KEY = 'topiqueiros_v2';
+
+const DEFAULT_DRIVERS = [
+  { rota: 'SÃO MIGUEL', responsavel: 'GUILHERME', valor: 9.5 },
+  { rota: 'MARCELINO VIEIRA', responsavel: 'REINALDO', valor: 8.5 },
+  { rota: 'PORTALEGRE, FRANCISCO DANTAS', responsavel: 'CARLOS', valor: 9.5 },
+  { rota: 'LUIS GOMES', responsavel: 'GIELSON', valor: 9.5 },
+  { rota: 'ANTONIO MARTINS, FRUTUOSO GOMES/ J.DIAS', responsavel: 'ANTONIO', valor: 9.5 },
+  { rota: 'LUCRÉCIA', responsavel: 'MANU', valor: 9.5 },
+  { rota: 'MARTINS', responsavel: 'JESUI', valor: 9.5 },
+  { rota: 'CORONEL J PESSOA/ VENHA-VER', responsavel: 'SAMY', valor: 8.5 },
+  { rota: 'DR SEVERIANO', responsavel: 'JANELIO', valor: 8.5 },
+  { rota: 'UMARIZAL', responsavel: 'TITICO', valor: 9.5 },
+  { rota: 'ALEXANDRIA', responsavel: 'DEMIAN ALVES', valor: 9.5 },
+  { rota: 'JOSÉ DA PENHA', responsavel: 'EVARISTO', valor: 9.5 },
+  { rota: 'TABOLEIRO GRANDE, SÃO FRANCISCO DO OESTE', responsavel: 'IVANAC', valor: 8.5 },
+  { rota: 'ENCANTO', responsavel: 'UBIRAJARA', valor: 8.5 },
+  { rota: 'MAJOR SALES', responsavel: 'CELIO', valor: 8.5 },
+  { rota: 'RIACHO DA CRUZ, VIÇOSA', responsavel: 'FRANCISCO', valor: 8.5 },
+  { rota: 'RIACHO DE SANTANA', responsavel: 'JOSINALDO', valor: 8.5 },
+  { rota: 'TENENTE ANANIAS', responsavel: 'SANDRO', valor: 9.5 },
+  { rota: 'SERRINHA DOS PINTOS', responsavel: 'ZOME', valor: 8.5 },
+  { rota: 'RAFAEL FERNANDES', responsavel: 'ZÉ', valor: 8.5 },
+  { rota: 'PARANÁ', responsavel: 'ROZIVAN', valor: 8.5 },
+  { rota: 'AGUA NOVA', responsavel: 'CLEGINALDO', valor: 8.5 },
+  { rota: 'PILÕES', responsavel: 'DAMIÃO', valor: 8.5 },
+];
+
+let state = {
+  drivers: [],       // { rota, responsavel, valor }
+  months: {},        // { "2025-06": [ { id, data, rotaIdx, qtd, total } ] }
+  currentMonth: '',  // "2025-06"
+};
+
+function saveState() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+function loadState() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) {
+    try { state = JSON.parse(raw); } catch(e) { initDefaults(); }
+  } else {
+    initDefaults();
+  }
+  // garantir mês atual se não existir
+  if (!state.currentMonth) {
+    const now = new Date();
+    state.currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  }
+  if (!state.months[state.currentMonth]) {
+    state.months[state.currentMonth] = [];
+  }
+}
+
+function initDefaults() {
+  state.drivers = DEFAULT_DRIVERS.map(d => ({...d}));
+  const now = new Date();
+  state.currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  state.months = {};
+  state.months[state.currentMonth] = [];
+  saveState();
+}
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function fmtBRL(v) {
+  return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function monthLabel(key) {
+  if (!key) return '—';
+  const [y,m] = key.split('-');
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${months[parseInt(m,10)-1]} ${y}`;
+}
+function currentEntries() {
+  return state.months[state.currentMonth] || [];
+}
+function uid() { return Math.random().toString(36).slice(2,10); }
+
+// ══════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════
+let _toastTimer;
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// ══════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════
+const tabIds = ['lancamentos','relatorio','motoristas'];
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const id = t.dataset.tab;
+    tabIds.forEach(tid => {
+      const el = document.getElementById(`tab-${tid}`);
+      if (el) el.classList.toggle('hidden', tid !== id);
+    });
+    renderAll();
+  });
+});
+
+// ══════════════════════════════════════════
+//  NAVEGAÇÃO DE MÊS
+// ══════════════════════════════════════════
+document.getElementById('btnPrevMonth').addEventListener('click', () => {
+  const [y,m] = state.currentMonth.split('-').map(Number);
+  const d = new Date(y, m-2, 1);
+  state.currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  if (!state.months[state.currentMonth]) state.months[state.currentMonth] = [];
+  saveState();
+  renderAll();
+});
+
+document.getElementById('btnNextMonth').addEventListener('click', () => {
+  const [y,m] = state.currentMonth.split('-').map(Number);
+  const d = new Date(y, m, 1);
+  state.currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  if (!state.months[state.currentMonth]) state.months[state.currentMonth] = [];
+  saveState();
+  renderAll();
+});
+
+// ══════════════════════════════════════════
+//  RENDER SELECT DE ROTAS
+// ══════════════════════════════════════════
+function populateRotaSelect() {
+  const sel = document.getElementById('fRota');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Selecione a rota...</option>';
+  state.drivers.forEach((d,i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${d.rota} — ${d.responsavel}`;
+    sel.appendChild(opt);
+  });
+  sel.value = prev;
+}
+
+// auto-calc total
+document.getElementById('fRota').addEventListener('change', calcTotal);
+document.getElementById('fQtd').addEventListener('input', calcTotal);
+
+function calcTotal() {
+  const idx = document.getElementById('fRota').value;
+  const qtd = parseFloat(document.getElementById('fQtd').value) || 0;
+  if (idx === '' || qtd <= 0) { document.getElementById('fTotal').value = ''; return; }
+  const valor = state.drivers[parseInt(idx)].valor;
+  document.getElementById('fTotal').value = fmtBRL(qtd * valor);
+}
+
+// ══════════════════════════════════════════
+//  LANÇAMENTO
+// ══════════════════════════════════════════
+function addLancamento() {
+  const rotaIdx = document.getElementById('fRota').value;
+  const data    = document.getElementById('fData').value;
+  const qtd     = parseInt(document.getElementById('fQtd').value) || 0;
+
+  if (rotaIdx === '') return toast('Selecione uma rota.', 'err');
+  if (!data)          return toast('Informe a data.', 'err');
+  if (qtd <= 0)       return toast('Quantidade deve ser maior que 0.', 'err');
+
+  const driver = state.drivers[parseInt(rotaIdx)];
+  const total  = qtd * driver.valor;
+
+  const entries = state.months[state.currentMonth] || [];
+  entries.push({ id: uid(), data, rotaIdx: parseInt(rotaIdx), qtd, total });
+  state.months[state.currentMonth] = entries;
+  saveState();
+
+  document.getElementById('fRota').value = '';
+  document.getElementById('fQtd').value  = '';
+  document.getElementById('fTotal').value = '';
+
+  renderAll();
+  toast('Lançamento adicionado!');
+}
+
+function deleteLancamento(id) {
+  state.months[state.currentMonth] = currentEntries().filter(e => e.id !== id);
+  saveState();
+  renderAll();
+  toast('Lançamento removido.', 'info');
+}
+
+function clearFilters() {
+  document.getElementById('filterTexto').value = '';
+  document.getElementById('filterData').value = '';
+  renderLancamentos();
+}
+
+// ══════════════════════════════════════════
+//  RENDER LANÇAMENTOS
+// ══════════════════════════════════════════
+function renderLancamentos() {
+  const txt  = document.getElementById('filterTexto').value.toLowerCase();
+  const data = document.getElementById('filterData').value;
+  let entries = currentEntries();
+
+  if (txt) {
+    entries = entries.filter(e => {
+      const d = state.drivers[e.rotaIdx];
+      if (!d) return false;
+      return d.rota.toLowerCase().includes(txt) || d.responsavel.toLowerCase().includes(txt);
+    });
+  }
+  if (data) entries = entries.filter(e => e.data === data);
+
+  // sort por data desc
+  entries = [...entries].sort((a,b) => b.data.localeCompare(a.data));
+
+  const tbody = document.getElementById('tbodyLanc');
+  tbody.innerHTML = '';
+
+  if (entries.length === 0) {
+    document.getElementById('emptyLanc').classList.remove('hidden');
+    document.getElementById('lancBadge').textContent = '0';
+    return;
+  }
+  document.getElementById('emptyLanc').classList.add('hidden');
+  document.getElementById('lancBadge').textContent = entries.length;
+
+  entries.forEach(e => {
+    const d = state.drivers[e.rotaIdx];
+    if (!d) return;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-mono">${fmtDate(e.data)}</td>
+      <td>${d.rota}</td>
+      <td>${d.responsavel}</td>
+      <td class="td-blue td-mono">${e.qtd}</td>
+      <td class="td-mono" style="color:var(--text3)">${fmtBRL(d.valor)}</td>
+      <td class="td-green td-mono">${fmtBRL(e.total)}</td>
+      <td><button class="del-btn" onclick="deleteLancamento('${e.id}')" title="Remover">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════════
+//  RENDER STATS
+// ══════════════════════════════════════════
+function renderStats() {
+  const entries = currentEntries();
+  const totalVol  = entries.reduce((s,e) => s + e.qtd, 0);
+  const totalCust = entries.reduce((s,e) => s + e.total, 0);
+  const motoristas = new Set(entries.map(e => e.rotaIdx)).size;
+
+  document.getElementById('statVolumes').textContent = totalVol;
+  document.getElementById('statCusto').textContent   = fmtBRL(totalCust);
+  document.getElementById('statEntradas').textContent = entries.length;
+  document.getElementById('statMotoristas').textContent = motoristas;
+  document.getElementById('monthLabel').textContent  = monthLabel(state.currentMonth);
+}
+
+// ══════════════════════════════════════════
+//  RENDER RELATÓRIO UNIFICADO
+// ══════════════════════════════════════════
+let sortMotorista = 'valor';
+
+function setSortMotorista(tipo, btn) {
+  sortMotorista = tipo;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRelatorio();
+}
+
+function renderRelatorio() {
+  const entries = currentEntries();
+  const mes = monthLabel(state.currentMonth);
+
+  document.getElementById('relTitulo').textContent = `Relatório — ${mes}`;
+
+  // ── Agregações ──
+  const totalVol  = entries.reduce((s,e) => s + e.qtd, 0);
+  const totalCust = entries.reduce((s,e) => s + e.total, 0);
+  const diasAtivos = new Set(entries.map(e => e.data)).size;
+  const motoristasAtivos = new Set(entries.map(e => e.rotaIdx)).size;
+  const mediaVolDia = diasAtivos > 0 ? (totalVol / diasAtivos).toFixed(1) : '0';
+
+  document.getElementById('relSub').textContent =
+    `${entries.length} lançamentos · ${diasAtivos} dias com movimento · ${motoristasAtivos} motoristas`;
+
+  // ── KPIs ──
+  document.getElementById('relKpis').innerHTML = `
+    <div class="rel-kpi">
+      <div class="rel-kpi-label">Total Volumes</div>
+      <div class="rel-kpi-value orange">${totalVol}</div>
+      <div class="rel-kpi-sub">caixas entregues no mês</div>
+    </div>
+    <div class="rel-kpi">
+      <div class="rel-kpi-label">Custo Total</div>
+      <div class="rel-kpi-value green">${fmtBRL(totalCust)}</div>
+      <div class="rel-kpi-sub">a pagar aos motoristas</div>
+    </div>
+    <div class="rel-kpi">
+      <div class="rel-kpi-label">Média por Dia</div>
+      <div class="rel-kpi-value blue">${mediaVolDia}</div>
+      <div class="rel-kpi-sub">volumes/dia (dias ativos)</div>
+    </div>
+    <div class="rel-kpi">
+      <div class="rel-kpi-label">Ticket Médio</div>
+      <div class="rel-kpi-value purple">${diasAtivos > 0 ? fmtBRL(totalCust / diasAtivos) : 'R$ 0,00'}</div>
+      <div class="rel-kpi-sub">custo médio por dia</div>
+    </div>
+  `;
+
+  // ── MOTORISTAS ──
+  const mapMot = {};
+  entries.forEach(e => {
+    const d = state.drivers[e.rotaIdx];
+    if (!d) return;
+    if (!mapMot[d.responsavel]) mapMot[d.responsavel] = { nome: d.responsavel, rotas: new Set(), vol: 0, valor: 0 };
+    mapMot[d.responsavel].rotas.add(d.rota);
+    mapMot[d.responsavel].vol   += e.qtd;
+    mapMot[d.responsavel].valor += e.total;
+  });
+
+  let rowsMot = Object.values(mapMot);
+  if (sortMotorista === 'valor')   rowsMot.sort((a,b) => b.valor - a.valor);
+  else if (sortMotorista === 'volumes') rowsMot.sort((a,b) => b.vol - a.vol);
+  else rowsMot.sort((a,b) => a.nome.localeCompare(b.nome));
+
+  const maxValor = rowsMot.reduce((m,r) => Math.max(m, r.valor), 0);
+  const maxVol   = rowsMot.reduce((m,r) => Math.max(m, r.vol), 0);
+  const contMot  = document.getElementById('relMotoristas');
+  const emptyMot = document.getElementById('emptyRelMotoristas');
+
+  if (rowsMot.length === 0) {
+    contMot.innerHTML = '';
+    emptyMot.classList.remove('hidden');
+  } else {
+    emptyMot.classList.add('hidden');
+    contMot.innerHTML = rowsMot.map((r,i) => {
+      const initials = r.nome.split(' ').map(w=>w[0]).join('').slice(0,2);
+      const pct = maxValor > 0 ? (r.valor / maxValor * 100).toFixed(1) : 0;
+      const pctVol = maxVol > 0 ? (r.vol / maxVol * 100).toFixed(1) : 0;
+      const rank = i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : i === 2 ? ' 🥉' : '';
+      return `
+        <div class="mot-card">
+          <div class="mot-avatar">${initials}</div>
+          <div class="mot-info">
+            <div class="mot-name">${r.nome}${rank}</div>
+            <div class="mot-rota">${[...r.rotas].join(', ')}</div>
+            <div class="mot-bar-wrap">
+              <div class="mot-bar" style="width:${pctVol}%"></div>
+            </div>
+          </div>
+          <div class="mot-stats">
+            <div class="mot-valor">${fmtBRL(r.valor)}</div>
+            <div class="mot-volumes">${r.vol} volumes</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── CALENDÁRIO POR DIA ──
+  const mapDia = {};
+  entries.forEach(e => {
+    if (!mapDia[e.data]) mapDia[e.data] = { vol: 0, custo: 0 };
+    mapDia[e.data].vol   += e.qtd;
+    mapDia[e.data].custo += e.total;
+  });
+
+  const dias = Object.keys(mapDia).sort();
+  const maxVolDia = dias.reduce((m,d) => Math.max(m, mapDia[d].vol), 0);
+  const contDia   = document.getElementById('relCalendario');
+  const emptyDia  = document.getElementById('emptyRelDia');
+
+  if (dias.length === 0) {
+    contDia.innerHTML = '';
+    emptyDia.classList.remove('hidden');
+  } else {
+    emptyDia.classList.add('hidden');
+    const diaHtml = dias.map(d => {
+      const v = mapDia[d];
+      const pct = maxVolDia > 0 ? (v.vol / maxVolDia * 100).toFixed(0) : 0;
+      const isTop = v.vol === maxVolDia;
+      const [y, m, dia] = d.split('-');
+      const nomeDia = new Date(y, m-1, dia).toLocaleDateString('pt-BR', { weekday:'short' });
+      return `
+        <div class="dia-card${isTop ? ' dia-top' : ''}">
+          <div class="dia-date">${nomeDia} ${dia}/${m}</div>
+          <div class="dia-vol">${v.vol}</div>
+          <div class="dia-vol-label">volumes</div>
+          <div class="dia-custo">${fmtBRL(v.custo)}</div>
+          <div class="dia-bar"><div class="dia-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+    contDia.innerHTML = `<div class="dia-grid">${diaHtml}</div>`;
+  }
+
+  // ── ROTAS ──
+  const mapRota = {};
+  entries.forEach(e => {
+    const d = state.drivers[e.rotaIdx];
+    if (!d) return;
+    if (!mapRota[d.rota]) mapRota[d.rota] = { rota: d.rota, resp: d.responsavel, vol: 0, custo: 0 };
+    mapRota[d.rota].vol   += e.qtd;
+    mapRota[d.rota].custo += e.total;
+  });
+
+  const rowsRota  = Object.values(mapRota).sort((a,b) => b.vol - a.vol);
+  const maxVolRota = rowsRota.reduce((m,r) => Math.max(m, r.vol), 0);
+  const contRota  = document.getElementById('relRotas');
+  const emptyRota = document.getElementById('emptyRelRota');
+
+  if (rowsRota.length === 0) {
+    contRota.innerHTML = '';
+    emptyRota.classList.remove('hidden');
+  } else {
+    emptyRota.classList.add('hidden');
+    let totalRotaVol = 0, totalRotaCusto = 0;
+    const rotaHtml = rowsRota.map(r => {
+      totalRotaVol += r.vol; totalRotaCusto += r.custo;
+      const pct = maxVolRota > 0 ? (r.vol / maxVolRota * 100).toFixed(0) : 0;
+      return `
+        <div class="rota-row">
+          <div>
+            <div class="rota-nome">${r.rota}</div>
+            <div class="rota-resp">${r.resp}</div>
+          </div>
+          <div class="rota-bar-wrap">
+            <div class="rota-bar-bg"><div class="rota-bar-fill" style="width:${pct}%"></div></div>
+            <div class="rota-vol">${r.vol} volumes (${pct}%)</div>
+          </div>
+          <div class="rota-val">${fmtBRL(r.custo)}</div>
+        </div>
+      `;
+    }).join('');
+    // linha total
+    const totalRow = `
+      <div class="rota-row" style="font-weight:700;border-top:2px solid var(--border);padding-top:12px">
+        <div><div class="rota-nome">TOTAL GERAL</div></div>
+        <div class="rota-bar-wrap"><div class="rota-vol" style="color:var(--accent);font-weight:700">${totalRotaVol} volumes</div></div>
+        <div class="rota-val" style="font-size:15px">${fmtBRL(totalRotaCusto)}</div>
+      </div>
+    `;
+    contRota.innerHTML = rotaHtml + totalRow;
+  }
+}
+
+function imprimirRelatorio() {
+  // Garantir que a tab de relatório esteja visível para o print
+  window.print();
+}
+
+// Manter compatibilidade com renderAll (funções antigas removidas)
+function renderResumo() {}
+function renderPorDia() {}
+function renderPorRota() {}
+
+// ══════════════════════════════════════════
+//  RENDER MOTORISTAS
+// ══════════════════════════════════════════
+function renderDrivers() {
+  const grid = document.getElementById('driversGrid');
+  grid.innerHTML = '';
+  document.getElementById('driverBadge').textContent = state.drivers.length;
+
+  if (state.drivers.length === 0) {
+    document.getElementById('emptyDrivers').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('emptyDrivers').classList.add('hidden');
+
+  state.drivers.forEach((d, i) => {
+    const initials = d.responsavel.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const div = document.createElement('div');
+    div.className = 'driver-card';
+    div.innerHTML = `
+      <div class="driver-avatar">${initials}</div>
+      <div class="driver-info">
+        <div class="driver-name">${d.responsavel}</div>
+        <div class="driver-route">${d.rota}</div>
+        <div class="driver-value">${fmtBRL(d.valor)} / cx</div>
+        ${d.pixKey ? `<div class="driver-pix">🔑 Pix: <span class="pix-key">${d.pixKey}</span><button class="pix-copy-btn" onclick="copyPix(event,'${d.pixKey.replace(/'/g,"\\'")}')">📋</button></div>` : `<div class="driver-pix" style="color:var(--text3);font-style:italic">Sem chave Pix</div>`}
+      </div>
+      <div class="driver-actions">
+        <button class="icon-btn edit" onclick="openEdit(${i})" title="Editar">✏️</button>
+        <button class="icon-btn del" onclick="deleteDriver(${i})" title="Remover">🗑</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════════════
+//  CRUD MOTORISTAS
+// ══════════════════════════════════════════
+function addDriver() {
+  const rota    = document.getElementById('novaRota').value.trim().toUpperCase();
+  const resp    = document.getElementById('novoResponsavel').value.trim().toUpperCase();
+  const pixKey  = document.getElementById('novoPixKey').value.trim();
+  const val     = parseFloat(document.getElementById('novoValor').value) || 0;
+
+  if (!rota) return toast('Informe a rota.', 'err');
+  if (!resp) return toast('Informe o responsável.', 'err');
+  if (val <= 0) return toast('Informe o valor por caixa.', 'err');
+
+  state.drivers.push({ rota, responsavel: resp, valor: val, pixKey });
+  saveState();
+  document.getElementById('novaRota').value = '';
+  document.getElementById('novoResponsavel').value = '';
+  document.getElementById('novoPixKey').value = '';
+  document.getElementById('novoValor').value = '';
+  renderAll();
+  toast('Motorista adicionado!');
+}
+
+function deleteDriver(i) {
+  if (!confirm(`Remover "${state.drivers[i].responsavel} — ${state.drivers[i].rota}"?\n\nOs lançamentos vinculados perderão a referência.`)) return;
+  state.drivers.splice(i, 1);
+  saveState();
+  renderAll();
+  toast('Motorista removido.', 'info');
+}
+
+function openEdit(i) {
+  const d = state.drivers[i];
+  document.getElementById('editIdx').value = i;
+  document.getElementById('editRota').value = d.rota;
+  document.getElementById('editResponsavel').value = d.responsavel;
+  document.getElementById('editPixKey').value = d.pixKey || '';
+  document.getElementById('editValor').value = d.valor;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+
+function saveEdit() {
+  const i      = parseInt(document.getElementById('editIdx').value);
+  const rota   = document.getElementById('editRota').value.trim().toUpperCase();
+  const resp   = document.getElementById('editResponsavel').value.trim().toUpperCase();
+  const pixKey = document.getElementById('editPixKey').value.trim();
+  const val    = parseFloat(document.getElementById('editValor').value) || 0;
+
+  if (!rota) return toast('Informe a rota.', 'err');
+  if (!resp) return toast('Informe o responsável.', 'err');
+  if (val <= 0) return toast('Informe o valor por caixa.', 'err');
+
+  const oldVal = state.drivers[i].valor;
+  state.drivers[i] = { rota, responsavel: resp, valor: val, pixKey };
+
+  // recalcular totais dos lançamentos se o valor mudou
+  if (oldVal !== val) {
+    Object.keys(state.months).forEach(mk => {
+      state.months[mk] = state.months[mk].map(e => {
+        if (e.rotaIdx === i) return { ...e, total: e.qtd * val };
+        return e;
+      });
+    });
+  }
+
+  saveState();
+  closeModal();
+  renderAll();
+  toast('Motorista atualizado!');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+}
+
+function copyPix(e, key) {
+  e.stopPropagation();
+  navigator.clipboard.writeText(key).then(() => toast('Chave Pix copiada!', 'ok')).catch(() => toast('Não foi possível copiar.', 'err'));
+}
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+// ══════════════════════════════════════════
+//  RENOVAR MÊS
+// ══════════════════════════════════════════
+function showRenewConfirm() {
+  const [y,m] = state.currentMonth.split('-').map(Number);
+  const next = new Date(y, m, 1);
+  const nextKey = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('renewTargetLabel').textContent = monthLabel(nextKey);
+  document.getElementById('renewOverlay').classList.remove('hidden');
+}
+
+function closeRenew() {
+  document.getElementById('renewOverlay').classList.add('hidden');
+}
+
+function confirmRenew() {
+  const [y,m] = state.currentMonth.split('-').map(Number);
+  const next = new Date(y, m, 1);
+  const nextKey = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;
+
+  if (!state.months[nextKey]) state.months[nextKey] = [];
+  state.currentMonth = nextKey;
+  saveState();
+  closeRenew();
+  renderAll();
+  toast(`Mês renovado para ${monthLabel(nextKey)}!`, 'ok');
+}
+
+document.getElementById('renewOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('renewOverlay')) closeRenew();
+});
+
+// ══════════════════════════════════════════
+//  EXPORT CSV
+// ══════════════════════════════════════════
+function exportCSV() {
+  const entries = currentEntries().slice().sort((a,b) => a.data.localeCompare(b.data));
+  if (entries.length === 0) return toast('Nenhum dado para exportar.', 'err');
+
+  const lines = ['DATA,ROTA,RESPONSÁVEL,VOLUMES,R$ POR CX,TOTAL'];
+  entries.forEach(e => {
+    const d = state.drivers[e.rotaIdx];
+    if (!d) return;
+    lines.push(`${fmtDate(e.data)},"${d.rota}","${d.responsavel}",${e.qtd},${d.valor},${e.total.toFixed(2)}`);
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `topiqueiros_${state.currentMonth}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exportado!');
+}
+
+// ══════════════════════════════════════════
+//  ENVIO POR E-MAIL — GMAIL API + PDF
+// ══════════════════════════════════════════
+
+// ⚠️  INSTRUÇÕES: Para usar o envio real pelo Gmail API você precisa de um
+//     Client ID do Google Cloud Console com o escopo gmail.send habilitado.
+//     Substitua o valor abaixo pelo seu Client ID.
+//     Guia: https://console.cloud.google.com/apis/credentials
+const GOOGLE_CLIENT_ID = localStorage.getItem('topiqueiros_google_client_id') || '';
+
+let googleAccessToken = null;
+let googleUserInfo    = null;
+
+// ── Autenticação Google OAuth2 (popup) ──
+function autenticarGoogle() {
+  const clientId = GOOGLE_CLIENT_ID || prompt('Cole aqui o Client ID do Google Cloud Console:\n\n(Crie em console.cloud.google.com → APIs → Credenciais → ID do cliente OAuth → Aplicativo da Web)\n\nVocê só precisa fazer isso uma vez.');
+  if (!clientId) return toast('Client ID não informado.', 'err');
+
+  localStorage.setItem('topiqueiros_google_client_id', clientId);
+
+  const params = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  window.location.href.split('?')[0].split('#')[0],
+    response_type: 'token',
+    scope:         'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email',
+    prompt:        'select_account',
+  });
+
+  const w = window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 'googleAuth', 'width=500,height=620,top=100,left=200');
+
+  // Escuta o redirect com token na URL
+  const timer = setInterval(() => {
+    try {
+      const url = w.location.href;
+      if (url.includes('access_token')) {
+        clearInterval(timer);
+        w.close();
+        const hash = new URLSearchParams(url.split('#')[1]);
+        googleAccessToken = hash.get('access_token');
+        buscarInfoUsuario();
+      }
+    } catch(e) { /* cross-origin, aguardar */ }
+    if (w.closed) clearInterval(timer);
+  }, 500);
+}
+
+async function buscarInfoUsuario() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${googleAccessToken}` }
+    });
+    googleUserInfo = await r.json();
+    document.getElementById('googleUserEmail').textContent = googleUserInfo.email || '';
+    document.getElementById('authNotConnected').classList.add('hidden');
+    document.getElementById('authConnected').classList.remove('hidden');
+    toast('Google conectado!', 'ok');
+  } catch(e) {
+    toast('Erro ao buscar dados da conta.', 'err');
+  }
+}
+
+function desconectarGoogle() {
+  googleAccessToken = null;
+  googleUserInfo    = null;
+  document.getElementById('authNotConnected').classList.remove('hidden');
+  document.getElementById('authConnected').classList.add('hidden');
+  toast('Conta Google desconectada.', 'info');
+}
+
+// ── Gera PDF do relatório com jsPDF ──
+function gerarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const entries = currentEntries();
+  const mes = monthLabel(state.currentMonth);
+  const totalVol = entries.reduce((s,e) => s + e.qtd, 0);
+  const totalVal = entries.reduce((s,e) => s + e.total, 0);
+
+  // Agrupa por motorista
+  const mapMot = {};
+  entries.forEach(e => {
+    const d = state.drivers[e.rotaIdx];
+    if (!d) return;
+    if (!mapMot[d.responsavel]) mapMot[d.responsavel] = { rota: d.rota, vol: 0, valor: 0, pix: d.pixKey || '' };
+    mapMot[d.responsavel].vol   += e.qtd;
+    mapMot[d.responsavel].valor += e.total;
+  });
+
+  const W = doc.internal.pageSize.getWidth();
+
+  // Cabeçalho laranja
+  doc.setFillColor(232, 97, 10);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('CONTROLE DE TOPIQUEIROS', 14, 12);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`Relatório Mensal — ${mes}`, 14, 20);
+  doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')}`, W - 14, 20, { align:'right' });
+
+  // KPIs
+  doc.setTextColor(30,30,30);
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text('TOTAL DE VOLUMES', 14, 38);
+  doc.text('TOTAL A PAGAR', 75, 38);
+  doc.text('MOTORISTAS ATIVOS', 136, 38);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.setTextColor(232, 97, 10);
+  doc.text(String(totalVol), 14, 46);
+  doc.setTextColor(22,163,74);
+  doc.text(fmtBRL(totalVal), 75, 46);
+  doc.setTextColor(30,30,30);
+  doc.text(String(Object.keys(mapMot).length), 136, 46);
+
+  // Linha separadora
+  doc.setDrawColor(220,220,220);
+  doc.line(14, 50, W-14, 50);
+
+  // Tabela motoristas
+  const rows = Object.entries(mapMot)
+    .sort((a,b) => b[1].valor - a[1].valor)
+    .map(([nome, d]) => [nome, d.rota, d.vol, fmtBRL(d.valor), d.pix || '—']);
+
+  doc.autoTable({
+    startY: 55,
+    head: [['Motorista','Rota','Volumes','Valor','Chave Pix']],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [232,97,10], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+    bodyStyles: { fontSize: 8 },
+    columnStyles: { 2: { halign:'center' }, 3: { halign:'right', fontStyle:'bold' } },
+    foot: [['TOTAL GERAL','','',fmtBRL(totalVal),'']],
+    footStyles: { fillColor: [245,245,245], textColor: [50,50,50], fontStyle:'bold', fontSize:9 },
+    margin: { left:14, right:14 },
+  });
+
+  // Rodapé
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFontSize(7); doc.setTextColor(160,160,160);
+  doc.text('Gerado pelo sistema Controle de Topiqueiros', 14, pageH - 8);
+
+  return doc;
+}
+
+function gerarTextoRelatorio() {
+  const entries = currentEntries();
+  const mes = monthLabel(state.currentMonth);
+  const totalVol = entries.reduce((s,e) => s + e.qtd, 0);
+  const totalVal = entries.reduce((s,e) => s + e.total, 0);
+  const mapMot = {};
+  entries.forEach(e => {
+    const d = state.drivers[e.rotaIdx];
+    if (!d) return;
+    if (!mapMot[d.responsavel]) mapMot[d.responsavel] = { rota: d.rota, vol: 0, valor: 0, pix: d.pixKey || '' };
+    mapMot[d.responsavel].vol += e.qtd;
+    mapMot[d.responsavel].valor += e.total;
+  });
+  const linhas = Object.entries(mapMot).sort((a,b)=>b[1].valor-a[1].valor)
+    .map(([n,d]) => `  • ${n} (${d.rota}) — ${d.vol} vol — ${fmtBRL(d.valor)}${d.pix ? ' | Pix: '+d.pix : ''}`).join('\n');
+  return `RELATÓRIO TOPIQUEIROS — ${mes.toUpperCase()}\n${'='.repeat(48)}\nTotal volumes: ${totalVol} | Total a pagar: ${fmtBRL(totalVal)} | Motoristas: ${Object.keys(mapMot).length}\n\nPAGAMENTO POR MOTORISTA\n${linhas || '(sem lançamentos)'}\n\n${'='.repeat(48)}\nEmitido em ${new Date().toLocaleDateString('pt-BR')}`;
+}
+
+// ── Converte PDF para base64 raw (sem cabeçalho data:) ──
+function pdfParaBase64(doc) {
+  const raw = doc.output('arraybuffer');
+  let binary = '';
+  const bytes = new Uint8Array(raw);
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+// ── Monta e-mail MIME com PDF anexado ──
+function montarMime(para, assunto, corpo, pdfBase64, nomeArquivo) {
+  const boundary = 'boundary_topiqueiros_' + Date.now();
+  const mime = [
+    `To: ${para}`,
+    `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(assunto)))}?=`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    corpo,
+    '',
+    `--${boundary}`,
+    `Content-Type: application/pdf; name="${nomeArquivo}"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; filename="${nomeArquivo}"`,
+    '',
+    pdfBase64,
+    '',
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  // Gmail API precisa de base64url sem padding
+  return btoa(unescape(encodeURIComponent(mime)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+// ── Envia via Gmail API ──
+async function enviarEmailGmail() {
+  if (!googleAccessToken) return toast('Conecte sua conta Google primeiro.', 'err');
+
+  const dest = document.getElementById('emailDestInput').value.trim();
+  if (!dest || !dest.includes('@')) return toast('Informe um e-mail de destino.', 'err');
+
+  const mes       = monthLabel(state.currentMonth);
+  const assunto   = `Relatório de Topiqueiros — ${mes}`;
+  const corpo     = gerarTextoRelatorio();
+  const arquivo   = `topiqueiros_${state.currentMonth}.pdf`;
+
+  toast('Gerando PDF e enviando...', 'info');
+
+  try {
+    const doc      = gerarPDF();
+    const pdfB64   = pdfParaBase64(doc);
+    const rawMime  = montarMime(dest, assunto, corpo, pdfB64, arquivo);
+
+    const resp = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${googleAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: rawMime }),
+    });
+
+    if (resp.ok) {
+      fecharModalEmail();
+      toast(`PDF enviado para ${dest}!`, 'ok');
+    } else {
+      const err = await resp.json();
+      if (err.error?.code === 401) {
+        googleAccessToken = null;
+        document.getElementById('authNotConnected').classList.remove('hidden');
+        document.getElementById('authConnected').classList.add('hidden');
+        toast('Sessão expirada. Conecte o Google novamente.', 'err');
+      } else {
+        toast(`Erro ao enviar: ${err.error?.message || 'desconhecido'}`, 'err');
+      }
+    }
+  } catch(e) {
+    toast('Erro ao gerar ou enviar o PDF.', 'err');
+    console.error(e);
+  }
+}
+
+function abrirModalEmail() {
+  const entries = currentEntries();
+  if (entries.length === 0) return toast('Sem lançamentos para enviar.', 'err');
+
+  // Atualiza status de autenticação
+  if (googleAccessToken) {
+    document.getElementById('authNotConnected').classList.add('hidden');
+    document.getElementById('authConnected').classList.remove('hidden');
+    document.getElementById('googleUserEmail').textContent = googleUserInfo?.email || '';
+  } else {
+    document.getElementById('authNotConnected').classList.remove('hidden');
+    document.getElementById('authConnected').classList.add('hidden');
+  }
+
+  // Chips de destinatários rápidos
+  const savedFinance = localStorage.getItem('topiqueiros_finance_email') || '';
+  const chips = document.getElementById('emailChips');
+  chips.innerHTML = '';
+  if (savedFinance) {
+    const chip = document.createElement('button');
+    chip.className = 'email-chip';
+    chip.innerHTML = `🏦 Finanças <span style="font-size:10px;opacity:0.7">${savedFinance}</span>`;
+    chip.onclick = () => {
+      chip.classList.toggle('selected');
+      document.getElementById('emailDestInput').value = chip.classList.contains('selected') ? savedFinance : '';
+    };
+    chips.appendChild(chip);
+  } else {
+    chips.innerHTML = '<span style="font-size:12px;color:var(--text3);font-style:italic">Cadastre o e-mail de Finanças abaixo.</span>';
+  }
+
+  document.getElementById('emailFinancasInput').value = savedFinance;
+  document.getElementById('emailDestInput').value = savedFinance;
+  document.getElementById('emailPreview').textContent = gerarTextoRelatorio();
+  document.getElementById('emailOverlay').classList.remove('hidden');
+}
+
+function fecharModalEmail() {
+  document.getElementById('emailOverlay').classList.add('hidden');
+}
+
+function salvarEmailFinancas() {
+  const email = document.getElementById('emailFinancasInput').value.trim();
+  if (!email || !email.includes('@')) return toast('Informe um e-mail válido.', 'err');
+  localStorage.setItem('topiqueiros_finance_email', email);
+  toast('E-mail de Finanças salvo!', 'ok');
+  abrirModalEmail();
+}
+
+document.getElementById('emailOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('emailOverlay')) fecharModalEmail();
+});
+
+// ══════════════════════════════════════════
+//  RENDER ALL
+// ══════════════════════════════════════════
+function renderAll() {
+  populateRotaSelect();
+  renderStats();
+  renderLancamentos();
+  renderRelatorio();
+  renderDrivers();
+}
+
+// ══════════════════════════════════════════
+//  TEMA CLARO / ESCURO
+// ══════════════════════════════════════════
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+  document.getElementById('btnTheme').textContent = dark ? '☀️' : '🌙';
+  document.getElementById('btnTheme').title = dark ? 'Mudar para tema claro' : 'Mudar para tema escuro';
+}
+
+function toggleTheme() {
+  const isDark = !document.body.classList.contains('dark');
+  localStorage.setItem('topiqueiros_theme', isDark ? 'dark' : 'light');
+  applyTheme(isDark);
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+loadState();
+
+// Restaurar tema salvo
+applyTheme(localStorage.getItem('topiqueiros_theme') === 'dark');
+
+// Setar data de hoje no formulário
+const hoje = new Date();
+document.getElementById('fData').value =
+  `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+
+renderAll();
+</script>
+</body>
+</html>
